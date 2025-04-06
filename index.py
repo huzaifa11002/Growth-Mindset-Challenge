@@ -1,4 +1,7 @@
-import streamlit as st 
+import streamlit as st
+import pandas as pd
+import os
+from io import BytesIO 
 import random
 
 # Page Config
@@ -7,13 +10,100 @@ st.set_page_config(page_title="Growth Mindset Challenge", layout="centered")
 
 # Sidebar
 st.sidebar.header("What do you want to perform")
-page = st.sidebar.radio("Select:", ["Number Guessing Game", "Calculator", "BMI Calculator" , "Word Counter"])
+page = st.sidebar.radio("Select:", ["Data Filter", "Number Guessing Game", "Calculator", "BMI Calculator" , "Word Counter"])
 
+if page == "Data Filter":
+    st.title("Data Filter and File Sweeper 📊")
+    st.write("This is a simple data filter application")
+    upload_file = st.file_uploader("Upload a file (CSV or Excel)", type=["csv", "xlsx"] , accept_multiple_files=False)
+
+    if upload_file:
+        file_ext = os.path.splitext(upload_file.name)[-1]
+        if file_ext == ".csv":
+            st.success("Your CSV file uploaded successfully")
+            df = pd.read_csv(upload_file)
+        elif file_ext == ".xlsx":
+            st.success("Your Excel file uploaded successfully")
+            df = pd.read_excel(upload_file, engine='openpyxl')
+        else:
+            st.error(f"Unsupported file format {file_ext}")
+        
+        st.write(f"Filename: {upload_file.name}")
+        st.write(f"File Size: {upload_file.size/1024:.2f} KB")
+
+        st.write("Preview of the data")
+        st.dataframe(df.head())
+
+        st.subheader("Analysis of the data")
+        filter_checkbox = st.checkbox("Filter the data")
+        convert_checkbox = st.checkbox("Convert the data file into another format")
+
+        if filter_checkbox and convert_checkbox:
+            st.warning("Please select only one option")
+            st.stop()
+
+        elif filter_checkbox:
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Remove Dupicates from the data"):
+                    df.drop_duplicates(inplace=True)
+                    st.success("Duplicates removed successfully")
+            with col2:
+                if st.button("Fill Missing Values"):
+                    df.fillna(0, inplace=True)
+                    st.success("Missing values filled successfully")
+
+            st.subheader("Filter the data")
+            columns = st.multiselect(f"Choose the columns to filter", df.columns, default=df.columns)
+            df = df[columns]
+            st.subheader("Filtered Data Preview")
+            st.dataframe(df)
+
+            select_ext = st.selectbox("Select the file format", ["CSV", "Excel"])
+                
+            buffer = BytesIO()
+            if st.button(f"Convert into {select_ext} file"):
+                if select_ext == "CSV":        
+                    df.to_csv(buffer, index=False)
+                    file_name = upload_file.name.replace(file_ext,".csv")
+                    mime_type = "text/csv"
+                    buffer.seek(0)
+                    st.download_button(label="Download CSV", data=buffer, file_name=file_name, mime=mime_type)
+                
+                else:
+                    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                        df.to_excel(writer, index=False, sheet_name='Sheet1')
+                        buffer.seek(0)
+                        file_name = upload_file.name.replace(file_ext,".xlsx")
+                        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        st.download_button(label="Download Excel", data=buffer, file_name=file_name, mime=mime_type)
+
+        elif convert_checkbox:
+            col1,col2 = st.columns(2)
+            with col1:
+                select_ext = st.selectbox("Select the file format", ["CSV", "Excel"])
+                
+            buffer = BytesIO()
+            if st.button(f"Convert into {select_ext} file"):
+                if select_ext == "CSV":        
+                    df.to_csv(buffer, index=False)
+                    file_name = upload_file.name.replace(file_ext,".csv")
+                    mime_type = "text/csv"
+                    buffer.seek(0)
+                    st.download_button(label="Download CSV", data=buffer, file_name=file_name, mime=mime_type)
+                
+                else:
+                    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                        df.to_excel(writer, index=False, sheet_name='Sheet1')
+                        buffer.seek(0)
+                        file_name = upload_file.name.replace(file_ext,".xlsx")
+                        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        st.download_button(label="Download Excel", data=buffer, file_name=file_name, mime=mime_type)
 
 
 # Number Guessing Game Page
 
-if page == "Number Guessing Game":
+elif page == "Number Guessing Game":
     st.title("Number Guessing Game 🤷‍♂️")
     st.write("Guess a number between 1 and 10")
 
